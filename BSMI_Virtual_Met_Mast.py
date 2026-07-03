@@ -94,8 +94,8 @@ times = df_clean.index
 # =====================================================================
 print("\nTraining LightGBM model for Virtual Met Mast...")
 lgbm_params = {
-    'n_estimators': 800,
-    'learning_rate': 0.05,
+    'n_estimators': 1000,
+    'learning_rate': 0.5,
     'max_depth': 12,
     'num_leaves': 128,
     'subsample': 0.8,
