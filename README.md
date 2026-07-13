@@ -2,7 +2,7 @@
 
 本專案利用位於台灣海峽風場之 **BSMI 觀測測風塔五年的 1 分鐘解析度大氣觀測資料**（期間為 2016-03 至 2021-10），進行一系列機器學習與數據分析實驗。
 
-專案核心涵蓋：風速迴歸預測、風況運行狀態分類、氣候模式分群、大氣穩定度時間序列預報，以及虛擬測風塔（感測器故障備援補值）等五大應用場景。
+專案核心涵蓋：風速迴歸預測、風況運行狀態分類、氣候模式分群、大氣穩定度時間序列預報、虛擬測風塔（感測器故障備援補值）、傳統時序統計分析與預報，以及時頻訊號分解與分頻預報等七大應用場景。
 
 ---
 
@@ -37,10 +37,20 @@ c:\kinn\
     │   ├── models/                    ← v1, v1_alt, v2 模型與技巧衰減評估圖
     │   └── README.md
     │
-    └── 05_virtual_met_mast/           ← 實驗五：虛擬測風塔即時補值 (感測器即時備援系統)
-        ├── BSMI_Virtual_Met_Mast.py
-        ├── BSMI_Virtual_Met_Mast_Tuning.py
-        ├── models/                    ← LightGBM 備援模型與 24小時模擬補值圖
+    ├── 05_virtual_met_mast/           ← 實驗五：虛擬測風塔即時補值 (感測器即時備援系統)
+    │   ├── BSMI_Virtual_Met_Mast.py
+    │   ├── BSMI_Virtual_Met_Mast_Tuning.py
+    │   ├── models/                    ← LightGBM 備援模型與 24小時模擬補值圖
+    │   └── README.md
+    │
+    ├── 06_statistical_forecasting/    ← 實驗六：傳統時序統計分析與預報 (ARIMA & VAR 滾動預報)
+    │   ├── wind_statistical_forecasting.py
+    │   ├── results/                   ← ACF/PACF 圖、預報軌跡與效能指標 CSV
+    │   └── README.md
+    │
+    └── 07_signal_decomposition/       ← 實驗七：時頻信號分解與分頻預報 (VMD & 混合預測)
+        ├── wind_signal_decomposition.py
+        ├── results/                   ← VMD 分解波形圖、軌跡比對圖與指標 CSV
         └── README.md
 ```
 
@@ -55,6 +65,8 @@ c:\kinn\
 | [**03_風況分群分析**](file:///c:/kinn/experiments/03_wind_clustering/README.md) | PCA + K-Means | 典型氣候模式聚類 ($k=4$) | **自動識別四大氣候型態**：<br>1. 冬季強東北季風 (26.9%)<br>2. 中等強度東北季風 (34.4%)<br>3. 夏季西南季風 (30.3%)<br>4. 夏季微風對流 (8.5%) | **風場規劃**：量化主導風場的典型氣候模式，以進行長期發電效益評估與風機佈署。 |
 | [**04_大氣穩定度預報**](file:///c:/kinn/experiments/04_stability_forecast/README.md) | LightGBM (HaF 時序特徵) | 未來 1~120 分鐘大氣穩定度 $\alpha$ | **平均 Accuracy: 94.34%**, **平均 $R^2$: 0.7011**<br>(5-Fold Expanding Window 嚴格驗證) | **安全預警**：提前 2 小時滾動預報大氣穩定度轉換，防止風剪剪應力造成葉片疲勞。 |
 | [**05_虛擬測風塔備援**](file:///c:/kinn/experiments/05_virtual_met_mast/README.md) | LightGBM + Optuna 調優 | 100m Anemometer 失效補值 | **MAE: 0.2554 m/s**, **$R^2$: 0.9960**<br>(270萬筆/5年數據五折驗證) | **感測器備援**：當高空主感測器損壞/結冰時，無延遲即時補值，確保 SCADA 持續運行。 |
+| [**06_傳統時序預報**](file:///c:/kinn/experiments/06_statistical_forecasting/README.md) | ARIMA(2,1,2) & VAR | 100m 平均風速 (`WS_100E`) | **t+10 MAE: ~0.419 m/s** ($R^2$: 99.0%)<br>**t+60 MAE: ~1.105 m/s** ($R^2$: 93.7%) | **超短期調度**：利用自身歷史或多高度關聯性預報未來 1 小時風速，輔助風機即時微調。 |
+| [**07_時頻信號分解**](file:///c:/kinn/experiments/07_signal_decomposition/README.md) | VMD + 隨機森林混合模型 | 100m 平均風速 (`WS_100E`) | **MAE: 0.646 m/s**, **$R^2$: 0.8978**<br>(探討即時滾動預測的端點效應) | **去噪研究**：解析風速多尺度頻率特性，量化並指明即時預報中防洩漏邊界效應的挑戰。 |
 
 ---
 
