@@ -1,0 +1,22 @@
+# Virtual Environment
+myenv/
+__pycache__/
+*.pyc
+
+# Raw Datasets
+data/
+
+# Model Files (large binary files)
+*.pkl
+experiments/**/models/**/*.pkl
+experiments/**/models/*.pkl
+
+# Massive prediction/labeled output CSV files (keep summaries/reports)
+experiments/01_wind_regression/results/wind_rf_predictions.csv
+experiments/02_wind_classification/results/wind_classification_labeled.csv
+experiments/03_wind_clustering/results/wind_clustering_labeled.csv
+
+# Local environment / IDE configuration
+.idea/
+.vscode/
+.DS_Store
