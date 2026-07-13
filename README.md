@@ -66,7 +66,7 @@ c:\kinn\
 | [**04_大氣穩定度預報**](file:///c:/kinn/experiments/04_stability_forecast/README.md) | LightGBM (HaF 時序特徵) | 未來 1~120 分鐘大氣穩定度 $\alpha$ | **平均 Accuracy: 94.34%**, **平均 $R^2$: 0.7011**<br>(5-Fold Expanding Window 嚴格驗證) | **安全預警**：提前 2 小時滾動預報大氣穩定度轉換，防止風剪剪應力造成葉片疲勞。 |
 | [**05_虛擬測風塔備援**](file:///c:/kinn/experiments/05_virtual_met_mast/README.md) | LightGBM + Optuna 調優 | 100m Anemometer 失效補值 | **MAE: 0.2554 m/s**, **$R^2$: 0.9960**<br>(270萬筆/5年數據五折驗證) | **感測器備援**：當高空主感測器損壞/結冰時，無延遲即時補值，確保 SCADA 持續運行。 |
 | [**06_傳統時序預報**](file:///c:/kinn/experiments/06_statistical_forecasting/README.md) | ARIMA(2,1,2) & VAR | 100m 平均風速 (`WS_100E`) | **t+10 MAE: ~0.419 m/s** ($R^2$: 99.0%)<br>**t+60 MAE: ~1.105 m/s** ($R^2$: 93.7%) | **超短期調度**：利用自身歷史或多高度關聯性預報未來 1 小時風速，輔助風機即時微調。 |
-| [**07_時頻信號分解**](file:///c:/kinn/experiments/07_signal_decomposition/README.md) | VMD + 隨機森林混合模型 | 100m 平均風速 (`WS_100E`) | **MAE: 0.646 m/s**, **$R^2$: 0.8978**<br>(探討即時滾動預測的端點效應) | **去噪研究**：解析風速多尺度頻率特性，量化並指明即時預報中防洩漏邊界效應的挑戰。 |
+| [**07_時頻信號分解**](file:///c:/kinn/experiments/07_signal_decomposition/README.md) | VMD + RF / LGBM 混合模型 | 100m 平均風速 (`WS_100E`) | **VMD-RF MAE: 0.646 m/s** ($R^2$: 89.8%)<br>**VMD-LGBM MAE: 0.902 m/s** ($R^2$: 81.6%) | **去噪與過擬合研究**：分析風速多尺度頻率特性，量化並指明即時預報中防洩漏邊界效應與模型過擬合噪訊的挑戰。 |
 
 ---
 
