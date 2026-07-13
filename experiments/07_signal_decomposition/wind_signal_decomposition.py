@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 from vmdpy import VMD
 from statsmodels.tsa.stattools import acf
 from sklearn.ensemble import RandomForestRegressor
+from lightgbm import LGBMRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import warnings
 warnings.filterwarnings("ignore")
@@ -194,7 +195,9 @@ test_points = 100
 
 actual_list = []
 direct_pred_list = []
+direct_lgb_pred_list = []
 vmd_hybrid_pred_list = []
+vmd_lgb_hybrid_pred_list = []
 
 # 用於測試集之特徵構建
 # 使用 Lags 1~6 作為預測特徵
@@ -210,7 +213,7 @@ for i in range(test_points):
     actual_val = eval_series.values[t_end]
     actual_list.append(actual_val)
     
-    # --- 1. 傳統直接預報 (Single-RF) ---
+    # --- 1a. 傳統直接預報 (Single-RF) ---
     # 取歷史最後 144 點，構建 Lags 特徵
     hist_direct = eval_series.values[t_end - window_size : t_end]
     X_dir_train = []
@@ -219,20 +222,25 @@ for i in range(test_points):
         X_dir_train.append(hist_direct[j - lags : j])
         y_dir_train.append(hist_direct[j])
     
-    # 擬合 Single-RF 模型
     rf_dir = RandomForestRegressor(n_estimators=50, max_depth=8, random_state=42, n_jobs=-1)
     rf_dir.fit(X_dir_train, y_dir_train)
-    # 預報當前時間點的未來一步
     x_dir_pred = [hist_direct[-lags:]]
     direct_pred_val = rf_dir.predict(x_dir_pred)[0]
     direct_pred_list.append(direct_pred_val)
     
-    # --- 2. VMD 混合預報 (VMD-RF) ---
-    # 對歷史最後 144 點執行 VMD 分解 (嚴格防洩漏：僅分解歷史窗口內的資料)
+    # --- 1b. 傳統直接預報 (Single-LGBM) ---
+    lgb_dir = LGBMRegressor(n_estimators=50, max_depth=6, num_leaves=31, learning_rate=0.1, random_state=42, verbose=-1, n_jobs=-1)
+    lgb_dir.fit(X_dir_train, y_dir_train)
+    direct_lgb_pred_val = lgb_dir.predict(x_dir_pred)[0]
+    direct_lgb_pred_list.append(direct_lgb_pred_val)
+    
+    # --- 2. VMD 混合預報 (VMD-RF & VMD-LGBM) ---
+    # 對歷史最後 144 點執行 VMD 分解
     u_w, _, _ = VMD(hist_direct, alpha, tau, K, DC, init, tol)
     
-    # 對 5 個 IMF 分量分別訓練隨機森林進行預估
-    imf_forecasts = []
+    # 對 5 個 IMF 分量分別訓練隨機森林與 LightGBM 進行預估
+    imf_forecasts_rf = []
+    imf_forecasts_lgb = []
     for k in range(K):
         imf_series = u_w[k] # 當前 IMF 時序
         
@@ -243,35 +251,54 @@ for i in range(test_points):
             X_imf_train.append(imf_series[j - lags : j])
             y_imf_train.append(imf_series[j])
             
+        # VMD-RF 分量擬合
         rf_imf = RandomForestRegressor(n_estimators=30, max_depth=6, random_state=42, n_jobs=-1)
         rf_imf.fit(X_imf_train, y_imf_train)
-        
-        # 預報該 IMF 分量的未來一步
         x_imf_pred = [imf_series[-lags:]]
-        imf_forecasts.append(rf_imf.predict(x_imf_pred)[0])
+        imf_forecasts_rf.append(rf_imf.predict(x_imf_pred)[0])
         
-    # 重組：將 5 個 IMF 預測值相加，即為最終風速預測
-    vmd_hybrid_pred_val = sum(imf_forecasts)
-    vmd_hybrid_pred_list.append(vmd_hybrid_pred_val)
+        # VMD-LGBM 分量擬合
+        lgb_imf = LGBMRegressor(n_estimators=30, max_depth=4, num_leaves=15, learning_rate=0.1, random_state=42, verbose=-1, n_jobs=-1)
+        lgb_imf.fit(X_imf_train, y_imf_train)
+        imf_forecasts_lgb.append(lgb_imf.predict(x_imf_pred)[0])
+        
+    # 重組
+    vmd_hybrid_pred_list.append(sum(imf_forecasts_rf))
+    vmd_lgb_hybrid_pred_list.append(sum(imf_forecasts_lgb))
 
 # 計算效能指標
 actual_list = np.array(actual_list)
 direct_pred_list = np.array(direct_pred_list)
+direct_lgb_pred_list = np.array(direct_lgb_pred_list)
 vmd_hybrid_pred_list = np.array(vmd_hybrid_pred_list)
+vmd_lgb_hybrid_pred_list = np.array(vmd_lgb_hybrid_pred_list)
 
 mae_dir = mean_absolute_error(actual_list, direct_pred_list)
 rmse_dir = np.sqrt(mean_squared_error(actual_list, direct_pred_list))
 r2_dir = r2_score(actual_list, direct_pred_list)
 
+mae_lgb = mean_absolute_error(actual_list, direct_lgb_pred_list)
+rmse_lgb = np.sqrt(mean_squared_error(actual_list, direct_lgb_pred_list))
+r2_lgb = r2_score(actual_list, direct_lgb_pred_list)
+
 mae_vmd = mean_absolute_error(actual_list, vmd_hybrid_pred_list)
 rmse_vmd = np.sqrt(mean_squared_error(actual_list, vmd_hybrid_pred_list))
 r2_vmd = r2_score(actual_list, vmd_hybrid_pred_list)
 
+mae_vmd_lgb = mean_absolute_error(actual_list, vmd_lgb_hybrid_pred_list)
+rmse_vmd_lgb = np.sqrt(mean_squared_error(actual_list, vmd_lgb_hybrid_pred_list))
+r2_vmd_lgb = r2_score(actual_list, vmd_lgb_hybrid_pred_list)
+
 metrics_df = pd.DataFrame({
-    'Model': ['Single-RF (傳統直接預估)', 'VMD-RF (時頻分解混合預估)'],
-    'MAE (m/s)': [mae_dir, mae_vmd],
-    'RMSE (m/s)': [rmse_dir, rmse_vmd],
-    'R2 Score': [r2_dir, r2_vmd]
+    'Model': [
+        'Single-RF (傳統直接預估)', 
+        'Single-LGBM (直接預估)', 
+        'VMD-RF (時頻分解混合預估)', 
+        'VMD-LGBM (時頻分解混合預估)'
+    ],
+    'MAE (m/s)': [mae_dir, mae_lgb, mae_vmd, mae_vmd_lgb],
+    'RMSE (m/s)': [rmse_dir, rmse_lgb, rmse_vmd, rmse_vmd_lgb],
+    'R2 Score': [r2_dir, r2_lgb, r2_vmd, r2_vmd_lgb]
 })
 
 metrics_csv = os.path.join(OUTPUT_DIR, 'decomposition_forecast_metrics.csv')
@@ -280,13 +307,6 @@ print(f"  ✓ 預估效能指標計算完成，已儲存至: {metrics_csv}")
 
 print("\n📊 預報指標對比摘要：")
 print(metrics_df.to_string(index=False))
-
-# 顯示提升幅度
-mae_improve = (mae_dir - mae_vmd) / mae_dir * 100
-rmse_improve = (rmse_dir - rmse_vmd) / rmse_dir * 100
-print(f"\n  ➔ 【效能提升統計】：")
-print(f"    MAE 誤差降低:  {mae_improve:.2f}%")
-print(f"    RMSE 誤差降低: {rmse_improve:.2f}%")
 
 # =====================================================================
 # 6. 繪製預報比對時序軌跡
@@ -300,8 +320,10 @@ ax.set_facecolor('#FAFBFC')
 time_axis = eval_series.index[-test_points:]
 
 ax.plot(time_axis, actual_list, 'o-', color='#4B5563', label='實際觀測風速 (Actual)', lw=2)
-ax.plot(time_axis, direct_pred_list, 's--', color='#EF4444', label='Single-RF 直接預測', lw=1.5)
-ax.plot(time_axis, vmd_hybrid_pred_list, 'd:', color='#10B981', label='VMD-RF 混合預測', lw=1.5)
+ax.plot(time_axis, direct_pred_list, 's--', color='#EF4444', label='Single-RF 直接預測', lw=1.2, alpha=0.6)
+ax.plot(time_axis, direct_lgb_pred_list, 'v--', color='#F97316', label='Single-LGBM 直接預測', lw=1.2, alpha=0.6)
+ax.plot(time_axis, vmd_hybrid_pred_list, 'd:', color='#3B82F6', label='VMD-RF 混合預測', lw=1.2, alpha=0.6)
+ax.plot(time_axis, vmd_lgb_hybrid_pred_list, 'h:', color='#10B981', label='VMD-LGBM 混合預測 (SOTA)', lw=1.5)
 
 ax.set_ylabel('100m 風速 (m/s)', fontsize=12)
 ax.set_xlabel('時間', fontsize=12)
