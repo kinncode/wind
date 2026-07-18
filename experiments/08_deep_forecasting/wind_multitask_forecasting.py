@@ -185,10 +185,16 @@ class MultiTaskWindDataset(Dataset):
             torch.tensor(anomaly, dtype=torch.float32)
         )
 
-# 切分訓練與測試
+# 時序分割 (按時間劃分：前 70% 時間為訓練集，後 30% 為測試集)
 split_idx = int(len(eval_data) * 0.7)
-train_df = eval_data.iloc[:split_idx]
-test_df = eval_data.iloc[split_idx:]
+split_time = eval_data.index[split_idx]
+
+train_df = eval_data[eval_data.index < split_time]
+test_df = eval_data[eval_data.index >= split_time]
+
+print(f"  資料分割界線時間點: {split_time}")
+print(f"  訓練集時間區間: {train_df.index[0]} 至 {train_df.index[-1]} ({len(train_df)} 點)")
+print(f"  測試集時間區間: {test_df.index[0]} 至 {test_df.index[-1]} ({len(test_df)} 點)")
 
 train_dataset = MultiTaskWindDataset(train_df, seq_len, pred_len)
 test_dataset = MultiTaskWindDataset(test_df, seq_len, pred_len)

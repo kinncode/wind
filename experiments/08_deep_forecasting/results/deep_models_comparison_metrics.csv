@@ -1,0 +1,9 @@
+Model,Horizon,MAE,RMSE,R2
+DLinear,t+10min,0.4495,0.5748,0.9399
+DLinear,t+120min,1.6061,2.0844,0.2647
+NLinear,t+10min,0.4502,0.5748,0.94
+NLinear,t+120min,1.6363,2.1143,0.2435
+PatchLinear,t+10min,0.7887,0.9682,0.8296
+PatchLinear,t+120min,1.6574,2.1291,0.2329
+LightGBM,t+10min,0.5011,0.6357,0.9266
+LightGBM,t+120min,2.3066,2.789,-0.3164

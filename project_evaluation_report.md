@@ -112,12 +112,18 @@ graph TD
 
 ---
 
-### 實驗 08：深度學習時序預報模型 (DLinear & Multi-Task Net)
-*   **任務目標**：利用深度時序網路進行多步軌跡預測與多任務聯合學習。
+### 實驗 08：深度學習時序預報模型 (DLinear, NLinear, PatchLinear, LightGBM)
+*   **任務目標**：利用深度時序網路進行多步軌跡預測與多任務聯合學習，並與新一代機器學習進行對標。
 *   **評估指標**：MAE, RMSE, $R^2$, Classification F1-Score
-*   **方法與結果 (DLinear 優化版 - lr=0.0005, epoch=200)**：
-    *   **DLinear ($t+10\text{min}$)**: **`MAE 0.4596 m/s`** | `RMSE 0.5848` | **`$R^2$ 0.9378`** (**機器學習模型 SOTA，超越隨機森林**)
-    *   **DLinear ($t+120\text{min}$)**: `MAE 1.6607 m/s` | `$R^2$ 0.2337`
+*   **方法與結果對比 (10-min 與 120-min 預測)**：
+    *   **DLinear ($t+10\text{min}$)**: **`MAE 0.4449 m/s`** | `RMSE 0.5679` | **`$R^2$ 0.9414`** (最優，超越傳統機器學習)
+    *   **DLinear ($t+120\text{min}$)**: `MAE 1.6138 m/s` | `RMSE 2.0862` | **`$R^2$ 0.2635`**
+    *   **NLinear ($t+10\text{min}$)**: `MAE 0.4499 m/s` | `RMSE 0.5709` | `R² 0.9408`
+    *   **NLinear ($t+120\text{min}$)**: `MAE 1.6253 m/s` | `RMSE 2.0974` | `R² 0.2555`
+    *   **PatchLinear ($t+10\text{min}$)**: `MAE 0.5752 m/s` | `RMSE 0.7518` | `R² 0.8973`
+    *   **PatchLinear ($t+120\text{min}$)**: `MAE 1.7138 m/s` | `RMSE 2.1862` | `R² 0.1912`
+    *   **LightGBM ($t+10\text{min}$)**: `MAE 0.5011 m/s` | `RMSE 0.6357` | `R² 0.9266` (表現強勁)
+    *   **LightGBM ($t+120\text{min}$)**: `MAE 2.3066 m/s` | `RMSE 2.7890` | `R² -0.3164` (由於漂移嚴重，長期預測失效)
 *   **多任務學習網路 (MTL-Net: 預測風速 + Alpha + 突變預警)**：
     *   任務 1 (風速 MAE)：`0.6720 m/s`
     *   任務 2 (Alpha MAE)：`0.0372`

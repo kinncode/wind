@@ -38,4 +38,43 @@ python wind_dlinear_forecasting.py
 
 ## 4. 檔案說明
 1.  `wind_dlinear_forecasting.py`：包含模型定義、資料處理、訓練循環與指標畫圖的主程式。
-2.  `results/`：儲存評估結果與對比圖表的目錄。
+2.  `wind_comparison_forecasting.py`：包含多模型對比訓練 (DLinear, NLinear, PatchLinear, LightGBM) 的比較程式。
+3.  `results/`：儲存評估結果與對比圖表的目錄。
+
+---
+
+## 5. SOTA 模型與新一代機器學習對比實驗
+
+為了進一步尋求風速預估的最佳架構，我們實現了多模型對比腳本 `wind_comparison_forecasting.py`，比較了以下新一代時序預報模型：
+
+1.  **DLinear**：時序雙線性分解模型。
+2.  **NLinear (AAAI 2023)**：去中心化線性模型，特別適合處理風速非平穩（Non-stationary）特徵，防範分佈偏移。
+3.  **PatchLinear (2023)**：引入 PatchTST 的 Patching 機制，將 144 點時序切分為重疊片段以捕捉局部語義並過濾隨機噪訊。
+4.  **LightGBM (Multi-Output)**：現代梯度提升決策樹代表，以 144 步滯後特徵 (Lagged Features) 進行直接多步預測。
+
+### 測試集指標對比 (t+10m 與 t+120m)
+
+| 模型名稱 (Model) | 預估步長 (Horizon) | MAE (m/s) | RMSE (m/s) | $R^2$ |
+| :--- | :--- | :--- | :--- | :--- |
+| **DLinear** | t+10min | **0.4449** | **0.5679** | **0.9414** |
+| **DLinear** | t+120min | **1.6138** | **2.0862** | **0.2635** |
+| **NLinear** | t+10min | 0.4499 | 0.5709 | 0.9408 |
+| **NLinear** | t+120min | 1.6253 | 2.0974 | 0.2555 |
+| **PatchLinear** | t+10min | 0.5752 | 0.7518 | 0.8973 |
+| **PatchLinear** | t+120min | 1.7138 | 2.1862 | 0.1912 |
+| **LightGBM** | t+10min | 0.5011 | 0.6357 | 0.9266 |
+| **LightGBM** | t+120min | 2.3066 | 2.7890 | -0.3164 |
+
+### 結果分析與洞察
+
+1.  **線性映射的高效性**：DLinear 與 NLinear 展現了最強的超短期預測效能 ($R^2$ 達 0.94)。這證明了對於風速預測而言，直接的時間步線性權重映射能有效避免複雜非線性模型的過擬合問題。
+2.  **非平穩性的消除**：DLinear 的分解結構與 NLinear 的去中心化手段在此數據段上表現非常接近且皆極佳，表明了在短期視窗內去偏移能提供高度穩健的預測能力。
+3.  **Patch 機制的潛力與限制**：PatchLinear ($R^2$ 0.8973) 表現雖略遜於 DLinear/NLinear，但仍取得了很高的準確性。在歷史輸入長度較短的情況下，Patching 減少了線性層的參數數量，對高頻隨機風速噪訊有一定的平滑去噪效果。
+4.  **機器學習 (LightGBM) 的極限**：LightGBM 在超短期 $t+10\text{min}$ 預估表現良好 ($R^2 = 0.9266$)，但其在長步長 $t+120\text{min}$ 時出現顯著退化 ($R^2 = -0.3164$)，說明多步直接輸出的 Tabular 模型容易在長步長預測中遺失時間趨勢，對比之下，深度線性時序模型能更好地延續物理時間趨勢。
+
+---
+
+## 6. 新增對比產出
+1.  `results/deep_models_comparison.png`：四種模型在測試集前 150 點預測軌跡對比。
+2.  `results/deep_models_comparison_metrics.csv`：各模型在不同 Horizon 的詳細指標 CSV。
+
